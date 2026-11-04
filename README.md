@@ -59,7 +59,5 @@ The board above is just this repository's demo. Your data and images stay in you
 - `starter/` — the three files users copy.
 - `demo/` — data for the demonstration above.
 - `extras/monitoring/` — optional collection of real GitHub workflow statuses.
+- `docs` - documentation on adjusting settings,[automatic pipeline monitoring](docs/monitoring.md), [local use and development](docs/development.md) 
 
-[Automatic pipeline monitoring](docs/monitoring.md) · [Local use and development](docs/development.md)
-
-MIT licensed. The bundled font retains its [own license](flight_board/fonts/LICENSE.txt).
