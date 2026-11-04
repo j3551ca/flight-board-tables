@@ -7,18 +7,17 @@ import os
 import shutil
 import sys
 import tempfile
-from dataclasses import fields, replace
 from pathlib import Path
 
 import yaml
 
-from .config import Config, load_config, validate, workspace_path
+from .config import Config, load_config, workspace_path
 from .io import read_table, readme_block, sign, updated_readme
 from .render import animation_frames, render_board, save_animation, validate_animation
 
 
 def parser() -> argparse.ArgumentParser:
-    """Expose configuration overrides without a separate GitHub-specific interface."""
+    """Select the workspace/configuration or validate without writing files."""
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument(
         "--workspace", type=Path, default=Path.cwd(), help="Consumer repository root."
@@ -26,51 +25,20 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument(
         "--config", help="YAML file; defaults to flight-board-config.yml when present."
     )
-    for name in (
-        "source",
-        "title",
-        "team",
-        "subtitle",
-        "footer",
-        "output-dir",
-        "readme",
-        "board-link",
-    ):
-        result.add_argument(f"--{name}", help=f"Override {name} from the configuration.")
-    for name in ("table-index", "font-size", "seed"):
-        result.add_argument(f"--{name}", type=int, help=f"Override {name} from the configuration.")
-    for name in ("no-animation", "no-buttons", "no-readme", "validate-only"):
-        result.add_argument(f"--{name}", action="store_true")
+    result.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Check configuration and layout without writing files.",
+    )
     return result
 
 
 def resolve_config(args: argparse.Namespace, root: Path) -> Config:
-    """Apply CLI overrides to the same configuration used by the Action."""
+    """Load every board setting from YAML, using defaults for unspecified values."""
     path = workspace_path(root, args.config or "flight-board-config.yml")
     if args.config and not path.is_file():
         raise ValueError(f"Configuration not found: {args.config}")
-    config = load_config(path if path.is_file() else None)
-    names = {item.name for item in fields(Config)}
-    overrides = {
-        key: value for key, value in vars(args).items() if key in names and value is not None
-    }
-    config = replace(config, **overrides)
-    config = replace(
-        config,
-        buttons=() if args.no_buttons else config.buttons,
-        readme="" if args.no_readme else config.readme,
-        animation=replace(
-            config.animation,
-            enabled=config.animation.enabled and not args.no_animation,
-            seed=args.seed if args.seed is not None else config.animation.seed,
-        ),
-        theme=replace(
-            config.theme,
-            font_size=args.font_size if args.font_size is not None else config.theme.font_size,
-        ),
-    )
-    validate(config)
-    return config
+    return load_config(path if path.is_file() else None)
 
 
 def generate(config: Config, root: Path, validate_only: bool = False) -> list[Path]:

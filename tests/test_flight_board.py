@@ -191,7 +191,8 @@ def test_validate_only_and_no_readme(workspace: Path) -> None:
     original = (workspace / "README.md").read_bytes()
     assert main(["--workspace", str(workspace), "--validate-only"]) == 0
     assert not (workspace / "assets").exists()
-    assert main(["--workspace", str(workspace), "--no-readme", "--no-animation"]) == 0
+    (workspace / "flight-board-config.yml").write_text("readme: ''\nanimation: {enabled: false}\n")
+    assert main(["--workspace", str(workspace)]) == 0
     assert (workspace / "README.md").read_bytes() == original
 
 
@@ -202,20 +203,16 @@ def test_action_targets_consumer_and_does_not_evaluate_input(
 ) -> None:
     output = tmp_path / "action-output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
-    assert (
-        main(
-            [
-                "--workspace",
-                str(workspace),
-                "--no-animation",
-                "--title",
-                "Literal $(touch SHOULD_NOT_EXIST)",
-                "--team",
-                'Team "R&D"',
-            ]
+    (workspace / "flight-board-config.yml").write_text(
+        json.dumps(
+            {
+                "title": "Literal $(touch SHOULD_NOT_EXIST)",
+                "team": 'Team "R&D"',
+                "animation": {"enabled": False},
+            }
         )
-        == 0
     )
+    assert main(["--workspace", str(workspace)]) == 0
     assert "image=assets/flight-board/board.png" in output.read_text()
     assert (workspace / "assets/flight-board/board.png").exists()
     assert not (workspace / "SHOULD_NOT_EXIST").exists()

@@ -95,7 +95,7 @@ buttons:
 
 Zero to six signs are supported. They share one evenly spaced row, automatically adjusting widths to their count. Three is a practical default for legibility. Labels can wrap to two lines; very long labels produce an error rather than clipping. Icons are text glyphs in the bundled font, so use simple symbols such as `▤`, `◆`, or `⚙`. Arrow options are `↑ ↗ → ↘ ↓ ↙ ← ↖`. Omit `icon` or `arrow` to use `◆` and `↗`.
 
-Remove this section, set `buttons: []`, or pass `--no-buttons` to remove all signs. The board moves up naturally without an empty navigation row.
+Remove this section or set `buttons: []` to remove all signs. The board moves up naturally without an empty navigation row.
 
 ## Animation
 
@@ -116,7 +116,7 @@ These are the defaults. `max_cells` limits simultaneous whole values, not letter
 
 One round lasts up to `max_rotations × frames_per_flip × frame_ms` milliseconds, followed by a still pause. There is also an initial still pause. GIF frame durations are stored in hundredths of a second, so prefer multiples of 10 ms. The encoder may merge identical frames without changing their combined duration.
 
-Set `enabled: false` or pass `--no-animation` to show the PNG in the README. A single-frame GIF is still generated for consumers expecting that filename. If all columns are protected, the GIF is static regardless of the enabled setting.
+Set `enabled: false` under `animation` to show the PNG in the README. A single-frame GIF is still generated for consumers expecting that filename. If all columns are protected, the GIF is static regardless of the enabled setting.
 
 ## Theme
 
@@ -136,7 +136,15 @@ Quote hex colors in YAML. The board scales to the README width. For readability,
 
 ## CLI and Action inputs
 
-Run `flight-board --help` for all arguments. CLI overrides take precedence over YAML. `--workspace` selects the consumer root. `--source`, `--title`, `--team`, `--subtitle`, `--footer`, `--output-dir`, `--readme`, `--board-link`, `--table-index`, `--font-size`, and `--seed` override their corresponding settings. `--no-buttons`, `--no-animation`, and `--no-readme` disable optional features. `--validate-only` checks data, paths, layout, and animation size without writing anything.
+The CLI has only three arguments (plus `--help`):
+
+| Argument | Purpose |
+| --- | --- |
+| `--config` | Select the YAML configuration file. |
+| `--workspace` | Select the repository root; defaults to the current directory. |
+| `--validate-only` | Check configuration, data, and layout without writing files. |
+
+All board settings live in YAML. Unspecified settings use the documented defaults.
 
 The Action has **one input**, `config`, defaulting to `flight-board-config.yml`. All board settings belong in that file. For example:
 
@@ -146,7 +154,7 @@ The Action has **one input**, `config`, defaulting to `flight-board-config.yml`.
     config: flight-board-config.yml
 ```
 
-The local CLI still offers overrides for convenience; the Action uses the same entry point.
+The Action and local CLI use the same entry point and configuration.
 
 **Migrating from v1:** move `source`, `title`, `team`, `output-dir` (as `output_dir`), and `readme` inputs into YAML. Replace `no-animation` with `animation: {enabled: false}`, `no-buttons` with `buttons: []`, and `no-readme` with `readme: ''`. The existing v1 tags remain available.
 
@@ -161,6 +169,6 @@ Place these markers wherever you want the board:
 <!-- flight-board:end -->
 ```
 
-Only that block is replaced. With no markers, a block is appended. Duplicate, missing, or reversed markers fail without overwriting the README. For a README that should never be edited, use `--no-readme` and embed the generated assets yourself.
+Only that block is replaced. With no markers, a block is appended. Duplicate, missing, or reversed markers fail without overwriting the README. For a README that should never be edited, set `readme: ''` and embed the generated assets yourself.
 
 The renderer caps input at 5 MB / 100 rows, cell text at 2,000 characters, board width at 4,000 pixels, and still size at six megapixels. Animation is limited to 220 million total palette-frame pixels to keep memory reasonable. Exceeding a limit produces guidance to reduce rows, widths, font size or animation rounds. Large inventories belong in a linked source table with a smaller summary board.

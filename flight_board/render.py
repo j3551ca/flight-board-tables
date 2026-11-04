@@ -255,7 +255,7 @@ def validate_animation(board: Board, animation: Animation) -> bool:
     if board.image.width * board.image.height * frame_count > MAX_ANIMATION_PIXELS:
         raise ValueError(
             "Animation is too large. Reduce rounds, rotations, font_size or rows, "
-            "or use --no-animation for a static board."
+            "or set animation.enabled to false in the configuration."
         )
     return can_animate
 

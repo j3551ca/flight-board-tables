@@ -17,9 +17,10 @@ Both the Action and local use run the **same entry point**: `python -m flight_bo
 
 ```bash
 flight-board --config demo/flight-board-config.yml --validate-only
-flight-board --config demo/flight-board-config.yml --no-animation
 flight-board --help
 ```
+
+All board settings—including animation, buttons, titles, and output paths—belong in `flight-board-config.yml`. The CLI only selects the config/workspace and optionally validates without writing.
 
 ## Follow the code
 
