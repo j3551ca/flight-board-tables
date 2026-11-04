@@ -1,0 +1,5 @@
+Pipeline,Stage,Next run,Status,Owner
+Genome assembly,Quality checks,Daily 06:00 UTC,Running,Genomics
+Variant discovery,Regression tests,Daily 08:00 UTC,Passed,Analysis
+Model training,Feature validation,Mon 10:00 UTC,Queued,Research
+Release pipeline,Package build,On release,Ready,Engineering

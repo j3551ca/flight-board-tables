@@ -1,0 +1,3 @@
+source: examples/pipelines.json
+title: DEPARTURES → RESEARCH PIPELINES
+# With no columns or buttons specified, all fields are inferred and signs are omitted.

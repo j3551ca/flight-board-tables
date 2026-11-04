@@ -1,0 +1,4 @@
+[
+  {"pipeline": "Genome assembly", "status": "Passed", "duration_minutes": 12},
+  {"pipeline": "Model training", "status": "Queued", "duration_minutes": null}
+]

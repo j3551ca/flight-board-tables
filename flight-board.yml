@@ -1,0 +1,41 @@
+# All paths are relative to the repository root, even if this config is in a subfolder.
+source: board.csv
+title: DEPARTURES → PIPELINE STATUS
+team: Example Research Team
+subtitle: Reproducible workflows, from input to insight
+footer: Example data · Click the board for the full source table
+
+# Omit columns entirely to display every source field with inferred widths.
+columns:
+  - field: Pipeline
+    width: 18
+  - field: Stage
+    width: 18
+  - field: Next run
+    label: SCHEDULE / UTC
+    width: 16
+    animate: false
+  - field: Status
+    width: 10
+  - field: Owner
+    width: 12
+
+# Remove this section (or use buttons: []) for a board with no navigation signs.
+buttons:
+  - label: Pipelines
+    url: board.csv
+    icon: ▤
+    arrow: →
+  - label: Configuration
+    url: docs/configuration.md
+    icon: ⚙
+    arrow: ↗
+  - label: Quick start
+    url: '#use-this-template'
+    icon: ◆
+    arrow: ↑
+
+animation:
+  max_cells: 4
+  rounds: 3
+  pause_ms: 4000

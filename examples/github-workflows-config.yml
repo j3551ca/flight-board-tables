@@ -1,0 +1,17 @@
+source: board.json
+title: DEPARTURES → GITHUB ACTIONS
+team: My Engineering Team
+subtitle: Latest run per workflow
+columns:
+  - field: Workflow
+    width: 24
+  - field: Status
+    width: 16
+  - field: Branch
+    width: 14
+  - field: Updated / UTC
+    width: 14
+    animate: false
+animation:
+  rounds: 2
+# Run URL remains in the linked JSON source, not in the image.

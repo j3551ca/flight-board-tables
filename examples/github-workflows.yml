@@ -1,0 +1,41 @@
+# Copy to .github/workflows/monitor.yml in a repository created from this template.
+# Also copy examples/github-workflows-config.yml to flight-board.yml.
+name: Monitor pipelines
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+  # Optional: update immediately after selected workflows finish.
+  # workflow_run:
+  #   workflows: [CI, Build]  # Replace with YOUR workflow names; omit this monitor.
+  #   types: [completed]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: flight-board-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Read latest workflow runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/collect_workflows.py --exclude 'Monitor pipelines' --exclude 'Update flight board'
+      - uses: ./
+        id: board
+      - name: Commit snapshot and board
+        env:
+          ASSETS: ${{ steps.board.outputs.assets-dir }}
+          README: ${{ steps.board.outputs.readme }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- board.json "$ASSETS"
+          if [ -n "$README" ]; then git add -- "$README"; fi
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update pipeline snapshot and board'
+            git push
+          fi

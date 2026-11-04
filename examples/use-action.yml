@@ -1,0 +1,34 @@
+# Copy to .github/workflows/board.yml in an existing repository.
+name: Update flight board
+on:
+  push:
+    branches: [main]
+    paths: [board.csv, flight-board.yml, .github/workflows/board.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: flight-board-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  board:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: j3551ca/flight-board@v1 # Pin to a release commit for immutable dependencies.
+        id: board
+        with:
+          config: flight-board.yml
+      - name: Commit generated files
+        env:
+          ASSETS: ${{ steps.board.outputs.assets-dir }}
+          README: ${{ steps.board.outputs.readme }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$ASSETS"
+          if [ -n "$README" ]; then git add -- "$README"; fi
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh flight board'
+            git push
+          fi
