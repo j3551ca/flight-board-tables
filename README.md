@@ -14,6 +14,8 @@ A split-flap status board for your repository. Bring your own table, choose your
 [Static board](assets/flight-board/board.png)
 <!-- flight-board:end -->
 
+Follow the **[step-by-step setup guide](docs/getting-started.md)** to create a new repository or add the Action to an existing one.
+
 ## Use this template
 
 1. Choose **Use this template → Create a new repository** on GitHub.
