@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeVar, get_type_hints
 from urllib.parse import urlsplit
 
 import yaml
@@ -80,121 +80,110 @@ class Config:
     theme: Theme = field(default_factory=Theme)
 
 
+@dataclass(frozen=True)
+class Table:
+    """Ordered field names and string-valued rows ready for presentation."""
+
+    fields: tuple[str, ...]
+    rows: tuple[dict[str, str], ...]
+
+
 T = TypeVar("T", Config, Column, Button, Animation, Theme)
 
 
 def _construct(cls: type[T], data: Any) -> T:
-    """Reject misspelled keys instead of silently ignoring configuration errors."""
+    """Build a settings object, rejecting unknown keys and non-mapping values."""
     if not isinstance(data, dict):
         raise ValueError(f"{cls.__name__} must be a mapping.")
-    unknown = set(data) - {item.name for item in fields(cls)}
-    if unknown:
-        raise ValueError(f"Unknown {cls.__name__} setting(s): {', '.join(sorted(unknown))}")
     try:
         return cls(**data)
     except TypeError as exc:
-        raise ValueError(f"Invalid {cls.__name__}: {exc}") from exc
+        raise ValueError(str(exc)) from exc
 
 
 def load_config(path: Path | None) -> Config:
-    """Load optional safe YAML, supplying defaults for every optional setting."""
+    """Read optional YAML and fill unspecified settings with the documented defaults."""
     data = {} if path is None else yaml.safe_load(path.read_text(encoding="utf-8"))
-    if data is None:
-        data = {}
+    data = {} if data is None else data
     if not isinstance(data, dict):
         raise ValueError("Configuration must be a YAML mapping.")
     for key in ("columns", "buttons"):
         if key in data and not isinstance(data[key], list):
             raise ValueError(f"{key} must be a list.")
-    if "columns" in data:
-        data["columns"] = tuple(_construct(Column, item) for item in data["columns"])
-    if "buttons" in data:
-        data["buttons"] = tuple(_construct(Button, item) for item in data["buttons"])
-    if "animation" in data:
-        data["animation"] = _construct(Animation, data["animation"])
-    if "theme" in data:
-        data["theme"] = _construct(Theme, data["theme"])
+    data["columns"] = tuple(_construct(Column, item) for item in data.get("columns", []))
+    data["buttons"] = tuple(_construct(Button, item) for item in data.get("buttons", []))
+    data["animation"] = _construct(Animation, data.get("animation", {}))
+    data["theme"] = _construct(Theme, data.get("theme", {}))
     config = _construct(Config, data)
     validate(config)
     return config
 
 
-def _integer(name: str, value: int, minimum: int, maximum: int) -> None:
-    if type(value) is not int or not minimum <= value <= maximum:
-        raise ValueError(f"{name} must be an integer from {minimum} to {maximum}.")
-
-
-def validate_link(value: str) -> None:
-    """Allow ordinary web links, relative paths and anchors, never executable URLs."""
-    if not isinstance(value, str) or any(ord(char) < 32 for char in value):
-        raise ValueError("Links must be text without control characters.")
-    parsed = urlsplit(value)
-    if parsed.scheme and parsed.scheme not in {"https", "http"}:
-        raise ValueError("Links must use HTTPS/HTTP, a relative path, or an anchor.")
-    if value.startswith("//"):
-        raise ValueError("Use an explicit https:// URL instead of a protocol-relative link.")
-
-
 def validate(config: Config) -> None:
-    """Validate both YAML types and resource limits before rendering or writing files."""
-    for key in (
-        "source",
-        "title",
-        "team",
-        "subtitle",
-        "footer",
-        "output_dir",
-        "readme",
-        "board_link",
-    ):
-        if not isinstance(getattr(config, key), str):
-            raise ValueError(f"{key} must be text (quote YAML dates and numbers).")
+    """Check declared scalar types, useful rendering bounds, and safe links."""
+    models: tuple[Config | Animation | Theme | Column | Button, ...] = (
+        config,
+        config.animation,
+        config.theme,
+        *config.columns,
+        *config.buttons,
+    )
+    for model in models:
+        hints = get_type_hints(type(model))
+        for item in fields(model):
+            expected = hints[item.name]
+            if expected in (str, int, bool) and type(getattr(model, item.name)) is not expected:
+                raise ValueError(f"{type(model).__name__}.{item.name} must be {expected.__name__}.")
     if not config.source or not config.output_dir:
         raise ValueError("source and output_dir cannot be empty.")
-    if type(config.uppercase) is not bool or type(config.animation.enabled) is not bool:
-        raise ValueError("uppercase and animation.enabled must be true or false.")
-    _integer("table_index", config.table_index, 0, 100)
-    _integer("theme.font_size", config.theme.font_size, 12, 40)
+    limits = [
+        ("table_index", config.table_index, 0, 100),
+        ("font_size", config.theme.font_size, 12, 40),
+    ]
+    limits += [("column.width", col.width, 4, 80) for col in config.columns]
+    limits += [
+        (key, getattr(config.animation, key), low, high)
+        for key, low, high in (
+            ("rounds", 1, 8),
+            ("max_cells", 1, 8),
+            ("min_rotations", 1, 10),
+            ("max_rotations", 1, 10),
+            ("frames_per_flip", 4, 12),
+            ("frame_ms", 20, 500),
+            ("pause_ms", 500, 60000),
+            ("seed", 0, 2**32 - 1),
+        )
+    ]
+    for name, value, low, high in limits:
+        if not low <= value <= high:
+            raise ValueError(f"{name} must be between {low} and {high}.")
     for item in fields(Theme):
         if item.name != "font_size":
-            try:
-                ImageColor.getrgb(getattr(config.theme, item.name))
-            except (ValueError, TypeError, AttributeError) as exc:
-                raise ValueError(f"Invalid theme color: {item.name}") from exc
-    for col in config.columns:
-        if not isinstance(col.field, str) or not col.field:
-            raise ValueError("Each column needs a nonempty field name.")
-        if not isinstance(col.label, str) or type(col.animate) is not bool:
-            raise ValueError("Column label must be text and animate must be true or false.")
-        _integer("column.width", col.width, 4, 80)
+            ImageColor.getrgb(getattr(config.theme, item.name))
+    if any(not col.field for col in config.columns):
+        raise ValueError("Each column needs a nonempty field name.")
     if len({col.field for col in config.columns}) != len(config.columns):
         raise ValueError("Column field names must be unique.")
     if len(config.buttons) > 6:
         raise ValueError("Use at most six navigation signs so they remain legible.")
     for button in config.buttons:
-        if not all(
-            isinstance(val, str) for val in (button.label, button.url, button.icon, button.arrow)
+        if (
+            not button.label
+            or not button.url
+            or len(button.arrow) != 1
+            or button.arrow not in "↑↗→↘↓↙←↖"
         ):
-            raise ValueError("All button settings must be text.")
-        if not button.label or not button.url:
-            raise ValueError("Each button needs a label and URL.")
-        if button.arrow not in {"↑", "↗", "→", "↘", "↓", "↙", "←", "↖"}:
-            raise ValueError("Use a directional arrow glyph such as →, ↑, or ↗.")
-        validate_link(button.url)
-    validate_link(config.board_link)
-    anim = config.animation
-    for key, minimum, maximum in (
-        ("rounds", 1, 8),
-        ("max_cells", 1, 8),
-        ("min_rotations", 1, 10),
-        ("max_rotations", 1, 10),
-        ("frames_per_flip", 4, 12),
-        ("frame_ms", 20, 500),
-        ("pause_ms", 500, 60000),
-        ("seed", 0, 2**32 - 1),
-    ):
-        _integer(f"animation.{key}", getattr(anim, key), minimum, maximum)
-    if anim.min_rotations > anim.max_rotations:
+            raise ValueError("Each button needs a label, URL, and a directional arrow such as ↗.")
+    for link in (config.board_link, *(button.url for button in config.buttons)):
+        if (
+            any(ord(char) < 32 for char in link)
+            or link.startswith("//")
+            or urlsplit(link).scheme not in ("", "http", "https")
+        ):
+            raise ValueError(
+                "Use an HTTPS/HTTP link, relative path, or anchor without control characters."
+            )
+    if config.animation.min_rotations > config.animation.max_rotations:
         raise ValueError("min_rotations cannot exceed max_rotations.")
 
 

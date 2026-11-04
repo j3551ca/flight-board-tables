@@ -1,0 +1,4 @@
+Pipeline,Status
+Quality checks,Running
+Variant calling,Passed
+Model training,Queued

@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from scripts import collect_workflows
+from extras.monitoring import collect_workflows
 
 
 def test_collector_preserves_status_links_and_never_run_workflows(

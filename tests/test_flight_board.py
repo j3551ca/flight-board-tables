@@ -10,8 +10,7 @@ from random import Random
 import pytest
 from PIL import Image, ImageChops
 
-from flight_board.action import run
-from flight_board.cli import generate, main
+from flight_board.__main__ import generate, main
 from flight_board.config import (
     Animation,
     Button,
@@ -21,8 +20,7 @@ from flight_board.config import (
     load_config,
     workspace_path,
 )
-from flight_board.data import Table, read_table
-from flight_board.publish import END, START, updated_readme
+from flight_board.io import END, START, Table, read_table, updated_readme
 from flight_board.render import animation_frames, choose_cells, render_board, save_animation
 
 
@@ -203,12 +201,21 @@ def test_action_targets_consumer_and_does_not_evaluate_input(
     tmp_path: Path,
 ) -> None:
     output = tmp_path / "action-output"
-    monkeypatch.setenv("GITHUB_WORKSPACE", str(workspace))
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
-    monkeypatch.setenv("FB_NO_ANIMATION", "true")
-    monkeypatch.setenv("FB_TITLE", "Literal $(touch SHOULD_NOT_EXIST)")
-    monkeypatch.setenv("FB_TEAM", 'Team "R&D"')
-    assert run() == 0
+    assert (
+        main(
+            [
+                "--workspace",
+                str(workspace),
+                "--no-animation",
+                "--title",
+                "Literal $(touch SHOULD_NOT_EXIST)",
+                "--team",
+                'Team "R&D"',
+            ]
+        )
+        == 0
+    )
     assert "image=assets/flight-board/board.png" in output.read_text()
     assert (workspace / "assets/flight-board/board.png").exists()
     assert not (workspace / "SHOULD_NOT_EXIST").exists()

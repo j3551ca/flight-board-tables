@@ -1,10 +1,9 @@
-name: Update flight board
+name: Update README demo
 on:
   push:
     branches: [main]
     paths:
-      - board.csv
-      - flight-board.yml
+      - demo/**
       - flight_board/**
       - action.yml
       - requirements-action.txt
@@ -24,6 +23,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./
         id: board
+        with:
+          config: demo/flight-board.yml
       - name: Commit refreshed board
         env:
           ASSETS: ${{ steps.board.outputs.assets-dir }}

@@ -1,5 +1,5 @@
 # All paths are relative to the repository root, even if this config is in a subfolder.
-source: board.csv
+source: demo/board.csv
 title: DEPARTURES → PIPELINE STATUS
 team: Example Research Team
 subtitle: Reproducible workflows, from input to insight
@@ -23,7 +23,7 @@ columns:
 # Remove this section (or use buttons: []) for a board with no navigation signs.
 buttons:
   - label: Pipelines
-    url: board.csv
+    url: demo/board.csv
     icon: ▤
     arrow: →
   - label: Configuration
@@ -31,7 +31,7 @@ buttons:
     icon: ⚙
     arrow: ↗
   - label: Quick start
-    url: '#use-this-template'
+    url: '#quick-start'
     icon: ◆
     arrow: ↑
 

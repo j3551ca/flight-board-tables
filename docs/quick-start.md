@@ -1,41 +1,31 @@
 # Quick start
 
-**No AI agent or API key required.** The board runs with Python and GitHub Actions.
+**Use the Action from your own repository. No AI agent, separate board repository, or Python setup is needed.**
 
-## New repository
+1. Copy these files:
 
-1. Open [flightboard_template](https://github.com/j3551ca/flightboard_template) and select **Use this template → Create a new repository**.
-2. Edit `board.csv` with your rows and `flight-board.yml` with your heading, team, and columns.
-3. Commit to `main`. Open **Actions → Update flight board** to see progress, then view your README.
-
-## Existing repository
-
-1. Copy these three files into your repository:
-
-   | Copy from this template | Save in your repository as |
+   | Copy | Save as |
    | --- | --- |
-   | [board.csv](../board.csv) | `board.csv` |
-   | [flight-board.yml](../flight-board.yml) | `flight-board.yml` |
-   | [Example workflow](../examples/use-action.yml) | `.github/workflows/board.yml` |
+   | [Table](../starter/board.csv) | `board.csv` |
+   | [Configuration](../starter/flight-board.yml) | `flight-board.yml` |
+   | [Workflow](../starter/flight-board-workflow.yml) | `.github/workflows/flight-board.yml` |
 
-2. Replace the example data and team name. Match `columns[].field` to your table headers. Remove `buttons` unless you want navigation signs, and replace example links with your own.
-3. Commit to `main`. The workflow adds the board to your README and saves the images automatically.
+2. Edit your table and set `team` in `flight-board.yml`. All columns display automatically. See [configuration](configuration.md) to choose columns, protect dates from animation, or add navigation signs.
+3. Commit to `main`. Open **Actions → Update flight board** to follow progress, then view your README.
 
-To choose its position, add these markers to your README before running:
+The workflow adds the board at the bottom of your README. To choose its position, insert:
 
 ```html
 <!-- flight-board:start -->
 <!-- flight-board:end -->
 ```
 
-Otherwise, the board is appended at the bottom.
+After setup, commit table or configuration changes to refresh the board. You can also select **Actions → Update flight board → Run workflow**.
 
-## After setup
+**Different branch or filenames?** Update the workflow's `branches` and `paths` filters.
 
-Edit your table or configuration and commit; the board refreshes. You can also run it from **Actions → Update flight board → Run workflow**.
+**Nothing runs?** Check that Actions is enabled and your organization permits this Action.
 
-If you use a different branch or filenames, update the workflow's `branches` and `paths`. The bot needs permission to push; protected branches may require your organization's pull-request process.
+**The bot cannot save changes?** It needs `contents: write`. Protected branches may require your organization's pull-request process instead of a direct push.
 
-**Want live pipeline statuses?** Add the optional [workflow monitor](monitoring.md). Otherwise, the board reflects your maintained table.
-
-[Full setup and troubleshooting](getting-started.md) · [All settings](configuration.md) · [Run locally](development.md)
+**Need live statuses?** The board normally reflects your table. Add the optional [workflow monitor](monitoring.md) to populate it automatically.

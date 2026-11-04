@@ -1,6 +1,6 @@
 # Configuration
 
-Start with `flight-board.yml`. Unknown settings fail with an error so a typo cannot silently change the board.
+Start with the [starter configuration](../starter/flight-board.yml). Unknown settings fail with an error so a typo cannot silently change the board.
 
 ## Board and source
 
@@ -98,7 +98,17 @@ Quote hex colors in YAML. The board scales to the README width. For readability,
 
 Run `flight-board --help` for all arguments. CLI overrides take precedence over YAML. `--workspace` selects the consumer root. `--source`, `--title`, `--team`, `--subtitle`, `--footer`, `--output-dir`, `--readme`, `--board-link`, `--table-index`, `--font-size`, and `--seed` override their corresponding settings. `--no-buttons`, `--no-animation`, and `--no-readme` disable optional features. `--validate-only` checks data, paths, layout, and animation size without writing anything.
 
-The composite Action exposes `config`, `source`, `title`, `team`, `output-dir`, `readme`, `no-animation`, `no-buttons`, and `no-readme`. Use YAML for detailed layout and timing. Boolean Action inputs must be quoted strings `'true'` or `'false'`. Empty string inputs mean “use config/default”; to clear an existing team name, set `team: ''` in the configuration.
+The Action has **one input**, `config`, defaulting to `flight-board.yml`. All board settings belong in that file. For example:
+
+```yaml
+- uses: j3551ca/flightboard_template@v2
+  with:
+    config: flight-board.yml
+```
+
+The local CLI still offers overrides for convenience; the Action uses the same entry point.
+
+**Migrating from v1:** move `source`, `title`, `team`, `output-dir` (as `output_dir`), and `readme` inputs into YAML. Replace `no-animation` with `animation: {enabled: false}`, `no-buttons` with `buttons: []`, and `no-readme` with `readme: ''`. The existing v1 tags remain available.
 
 Outputs: `assets-dir`, `readme` (empty if disabled), and `image`. The Action uses an isolated Python environment on Linux runners. Local rendering also works on macOS and Windows with Python 3.11+.
 

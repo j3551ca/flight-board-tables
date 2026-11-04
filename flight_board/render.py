@@ -11,8 +11,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
-from .config import Animation, Column, Config, Theme
-from .data import Table
+from .config import Animation, Column, Config, Table, Theme
 
 FONT_PATH = Path(__file__).parent / "fonts" / "DejaVuSansMono.ttf"
 MAX_FRAME_PIXELS = 6_000_000

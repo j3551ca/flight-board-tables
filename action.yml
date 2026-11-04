@@ -1,46 +1,22 @@
 name: Flight Board
-description: Render a configurable split-flap GIF and optional airport signs from CSV, JSON or Markdown.
+description: Turn a table into an animated flight board in your README.
 author: j3551ca
 branding:
   icon: grid
   color: yellow
 inputs:
   config:
-    description: Workspace-relative YAML config. Empty uses flight-board.yml if present.
-    default: ''
-  source:
-    description: Override the source CSV, JSON or Markdown path.
-    default: ''
-  title:
-    description: Override the board header.
-    default: ''
-  team:
-    description: Override the organization or team name.
-    default: ''
-  output-dir:
-    description: Override the dedicated generated assets directory.
-    default: ''
-  readme:
-    description: Override the README path.
-    default: ''
-  no-animation:
-    description: Use the static PNG in the README.
-    default: 'false'
-  no-buttons:
-    description: Omit configured navigation signs.
-    default: 'false'
-  no-readme:
-    description: Generate assets without editing a README.
-    default: 'false'
+    description: Path to your board configuration, relative to your repository root.
+    default: flight-board.yml
 outputs:
   assets-dir:
-    description: Workspace-relative directory containing the generated files.
+    description: Generated assets directory.
     value: ${{ steps.render.outputs.assets-dir }}
   readme:
-    description: Updated README path, or empty when README updates are disabled.
+    description: Updated README path (empty if disabled).
     value: ${{ steps.render.outputs.readme }}
   image:
-    description: Workspace-relative GIF or PNG used in the README.
+    description: Generated board image path.
     value: ${{ steps.render.outputs.image }}
 runs:
   using: composite
@@ -48,25 +24,18 @@ runs:
     - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
       with:
         python-version: '3.12'
-    - name: Render flight board
+    - name: Render board
       id: render
       shell: bash
       env:
-        FB_ACTION_PATH: ${{ github.action_path }}
-        FB_CONFIG: ${{ inputs.config }}
-        FB_SOURCE: ${{ inputs.source }}
-        FB_TITLE: ${{ inputs.title }}
-        FB_TEAM: ${{ inputs.team }}
-        FB_OUTPUT_DIR: ${{ inputs.output-dir }}
-        FB_README: ${{ inputs.readme }}
-        FB_NO_ANIMATION: ${{ inputs.no-animation }}
-        FB_NO_BUTTONS: ${{ inputs.no-buttons }}
-        FB_NO_README: ${{ inputs.no-readme }}
+        ACTION_ROOT: ${{ github.action_path }}
+        BOARD_CONFIG: ${{ inputs.config }}
       run: |
         set -euo pipefail
         environment_dir="$(mktemp -d "$RUNNER_TEMP/flight-board.XXXXXX")"
         trap 'rm -rf "$environment_dir"' EXIT
         python -m venv "$environment_dir"
         "$environment_dir/bin/python" -m pip install --disable-pip-version-check \
-          -r "$FB_ACTION_PATH/requirements-action.txt"
-        PYTHONPATH="$FB_ACTION_PATH" "$environment_dir/bin/python" -m flight_board.action
+          -r "$ACTION_ROOT/requirements-action.txt"
+        PYTHONPATH="$ACTION_ROOT" "$environment_dir/bin/python" -m flight_board \
+          --workspace "$GITHUB_WORKSPACE" --config "$BOARD_CONFIG"

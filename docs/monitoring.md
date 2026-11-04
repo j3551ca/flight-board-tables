@@ -1,43 +1,21 @@
-# Populate the board from real pipelines
+# Monitor real GitHub workflows
 
-The renderer turns a local table into images. It does not query pipeline systems by itself. Keep your data producer separate from the renderer so you can use GitHub Actions, Nextflow, a release tracker, a laboratory information system, or another source.
+The Action renders a table. This optional collector fills that table from GitHub's API so it reflects real workflow runs.
 
-## GitHub Actions example
+Copy these files into **your** repository instead of the ordinary starter files:
 
-For a repository created from this template:
+| Copy | Save as |
+| --- | --- |
+| [Collector](../extras/monitoring/collect_workflows.py) | `collect_workflows.py` |
+| [Configuration](../extras/monitoring/flight-board.yml) | `flight-board.yml` |
+| [Workflow](../extras/monitoring/flight-board-workflow.yml) | `.github/workflows/flight-board.yml` |
 
-1. Copy `examples/github-workflows-config.yml` to `flight-board.yml` and set your team name.
-2. Copy `examples/github-workflows.yml` to `.github/workflows/monitor.yml`.
-3. Run **Actions → Monitor pipelines → Run workflow**.
-4. In `update-board.yml`, change the source path filter from `board.csv` to `board.json` if you also want manual JSON edits to refresh the board.
+Set your team name, commit, and run **Actions → Monitor pipelines → Run workflow**. The workflow fetches statuses, writes `board.json`, runs the Action, and commits the table and images. It also checks every six hours. Do not install the ordinary starter workflow alongside this one.
 
-The collector reads the latest run of each active workflow, including its status, branch, update time, and run link. It writes `board.json`, then the normal renderer builds the board. Workflows with no runs show “Not run.” API failures fail the job instead of publishing false statuses. The monitor excludes itself and the rendering workflow by name.
+The collector shows the latest run per active workflow, including status, branch, UTC update time, and a run link. Workflows with no runs show “Not run.” API failures fail the job without replacing the previous snapshot with false statuses.
 
-The example schedule checks every six hours. GitHub may delay scheduled workflows, so treat the board as a snapshot, not a real-time alerting system. Optionally enable the commented `workflow_run` trigger with your actual workflow names to refresh after those runs complete. Do not include the monitor's own name or consume code/artifacts from untrusted pull requests in a privileged monitoring workflow.
+GitHub supplies the token automatically. The workflow requests `actions: read` for collecting and `contents: write` for saving. GitHub may delay scheduled jobs, so this is a status snapshot, not real-time alerting.
 
-```bash
-python scripts/collect_workflows.py \
-  --repository YOUR-ORG/YOUR-REPO \
-  --branch main \
-  --exclude 'Monitor pipelines' \
-  --output board.json
-```
+To refresh after specific workflows finish, enable the commented `workflow_run` trigger and enter their names. Exclude the monitor itself to avoid a loop. Never consume untrusted pull-request code or artifacts in a privileged monitoring workflow.
 
-`--repository` defaults to `GITHUB_REPOSITORY`. `GH_TOKEN` is optional for public API reads but is needed for private repositories and appropriate rate limits. In Actions, use `${{ github.token }}` with `actions: read`; `contents: write` is only needed by the later commit step. The example collector targets github.com; GitHub Enterprise Server users should adapt the API endpoint before use.
-
-For an existing repository consuming the reusable Action, copy the collector script too (or use your own data producer), and replace `uses: ./` with `uses: j3551ca/flightboard_template@v1` in the monitoring example.
-
-## Other pipeline systems
-
-Have your existing workflow write a CSV or JSON summary before invoking Flight Board:
-
-```json
-[
-  {"Pipeline": "Sample QC", "Status": "Passed", "Updated": "2026-11-04 14:00 UTC"},
-  {"Pipeline": "Assembly", "Status": "Running", "Updated": "2026-11-04 14:02 UTC"}
-]
-```
-
-Keep detailed logs in their original system. Use a `Run URL` field in the linked source or a navigation sign pointing to the dashboard. Each image is a single hyperlink; GIF frames cannot contain independently clickable cells.
-
-The default update workflow triggers only when its listed source/config/code paths change or when manually run. If you rename files, add additional data sources, or change the default branch, update those filters. Generated assets are excluded to avoid a render/commit loop. Scheduled monitoring is opt-in, not enabled in the template by default.
+For other pipeline systems, have your own producer write CSV or JSON before invoking the Action. The included collector targets github.com, not GitHub Enterprise Server.

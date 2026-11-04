@@ -15,14 +15,31 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e '.[dev]'
       - run: ruff check . && ruff format --check .
-      - run: mypy flight_board scripts
+      - run: mypy flight_board extras
       - run: pytest -q
-      - run: python -m flight_board --validate-only
+      - run: python -m flight_board --config demo/flight-board.yml --validate-only
   composite-action:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: cp starter/board.csv board.csv
       - uses: ./
         with:
-          no-animation: 'true'
-          no-buttons: 'true'
+          config: starter/flight-board.yml
+  public-consumer:
+    if: startsWith(github.ref, 'refs/tags/v2')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create a consumer workspace without the renderer source
+        run: |
+          printf 'Pipeline,Status\nExternal pipeline,Passed\n' > board.csv
+          printf 'team: External team\nanimation: {enabled: false}\n' > flight-board.yml
+          printf '# Consumer repository\n' > README.md
+      - uses: j3551ca/flightboard_template@v2
+        id: board
+      - name: Check the result
+        env:
+          IMAGE: ${{ steps.board.outputs.image }}
+        run: |
+          test -f "$IMAGE"
+          grep -q 'flight-board:start' README.md

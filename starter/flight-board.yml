@@ -1,0 +1,4 @@
+source: board.csv
+team: Your Team
+# All columns are displayed automatically. No navigation signs by default.
+# See docs/configuration.md in the Action repository for optional settings.
