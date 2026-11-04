@@ -12,6 +12,8 @@ Copy these files into **your** repository instead of the ordinary starter files:
 
 Set your team name, commit, and run **Actions → Monitor pipelines → Run workflow**. The workflow fetches statuses, writes `board.json`, runs the Action, and commits the table and images. It also checks every six hours. Do not install the ordinary starter workflow alongside this one.
 
+Lifecycle labels such as “Development” and “Production” describe your pipeline and should come from your own table or data producer. This collector reports execution results such as “Running” and “Success,” not deployment environments.
+
 The collector shows the latest run per active workflow, including status, branch, UTC update time, and a run link. Workflows with no runs show “Not run.” API failures fail the job without replacing the previous snapshot with false statuses.
 
 GitHub supplies the token automatically. The workflow requests `actions: read` for collecting and `contents: write` for saving. GitHub may delay scheduled jobs, so this is a status snapshot, not real-time alerting.

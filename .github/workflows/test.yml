@@ -35,7 +35,7 @@ jobs:
           printf 'Pipeline,Status\nExternal pipeline,Passed\n' > board.csv
           printf 'team: External team\nanimation: {enabled: false}\n' > flight-board-config.yml
           printf '# Consumer repository\n' > README.md
-      - uses: j3551ca/flightboard_template@v2
+      - uses: j3551ca/flightboard-tables@v2
         id: board
       - name: Check the result
         env:

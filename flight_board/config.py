@@ -1,148 +1,105 @@
-"""Typed configuration, validation, and workspace-relative path handling."""
+"""Plain dictionary defaults, validation, and workspace-relative path handling."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Any, TypeVar, get_type_hints
+from typing import Any
 from urllib.parse import urlsplit
 
 import yaml
 from PIL import ImageColor
 
-
-@dataclass(frozen=True)
-class Column:
-    """A source field, its display label, width in characters, and animation policy."""
-
-    field: str
-    label: str = ""
-    width: int = 16
-    animate: bool = True
+# Settings contain strings, numbers, booleans, and nested dictionaries/lists.
+Settings = dict[str, Any]
 
 
-@dataclass(frozen=True)
-class Button:
-    """An optional linked airport sign; URLs are relative to the README."""
-
-    label: str
-    url: str
-    icon: str = "◆"
-    arrow: str = "↗"
-
-
-@dataclass(frozen=True)
-class Animation:
-    """Deterministic animation timing and limits, expressed in milliseconds."""
-
-    enabled: bool = True
-    rounds: int = 3
-    max_cells: int = 4
-    min_rotations: int = 3
-    max_rotations: int = 6
-    frames_per_flip: int = 6
-    frame_ms: int = 60
-    pause_ms: int = 4000
-    seed: int = 27
-
-
-@dataclass(frozen=True)
-class Theme:
-    """Board palette and typography; the bundled font makes rendering portable."""
-
-    font_size: int = 22
-    background: str = "#111921"
-    panel: str = "#1b2732"
-    card: str = "#293946"
-    edge: str = "#3d4c58"
-    text: str = "#f5edda"
-    accent: str = "#f0c66a"
-    muted: str = "#c1ced8"
-
-
-@dataclass(frozen=True)
-class Config:
-    """Board settings. All filesystem paths are relative to the workspace root."""
-
-    source: str = "board.csv"
-    title: str = "DEPARTURES → PIPELINE STATUS"
-    team: str = ""
-    subtitle: str = ""
-    footer: str = ""
-    output_dir: str = "assets/flight-board"
-    readme: str = "README.md"
-    board_link: str = ""
-    table_index: int = 0
-    uppercase: bool = True
-    columns: tuple[Column, ...] = ()
-    buttons: tuple[Button, ...] = ()
-    animation: Animation = field(default_factory=Animation)
-    theme: Theme = field(default_factory=Theme)
+def default_config() -> Settings:
+    """Return fresh defaults so changing one board cannot affect another."""
+    return {
+        "source": "board.csv",
+        "title": "DEPARTURES → PIPELINE STATUS",
+        "team": "",
+        "subtitle": "",
+        "footer": "",
+        "output_dir": "assets/flight-board",
+        "readme": "README.md",
+        "board_link": "",
+        "table_index": 0,
+        "uppercase": True,
+        "columns": [],
+        "buttons": [],
+        "animation": {
+            "enabled": True,
+            "rounds": 3,
+            "max_cells": 4,
+            "min_rotations": 3,
+            "max_rotations": 6,
+            "frames_per_flip": 6,
+            "frame_ms": 60,
+            "pause_ms": 4000,
+            "seed": 27,
+        },
+        "theme": {
+            "font_size": 22,
+            "background": "#111921",
+            "panel": "#1b2732",
+            "card": "#293946",
+            "edge": "#3d4c58",
+            "text": "#f5edda",
+            "accent": "#f0c66a",
+            "muted": "#c1ced8",
+        },
+    }
 
 
-@dataclass(frozen=True)
-class Table:
-    """Ordered field names and string-valued rows ready for presentation."""
-
-    fields: tuple[str, ...]
-    rows: tuple[dict[str, str], ...]
-
-
-T = TypeVar("T", Config, Column, Button, Animation, Theme)
-
-
-def _construct(cls: type[T], data: Any) -> T:
-    """Build a settings object, rejecting unknown keys and non-mapping values."""
-    if not isinstance(data, dict):
-        raise ValueError(f"{cls.__name__} must be a mapping.")
-    try:
-        return cls(**data)
-    except TypeError as exc:
-        raise ValueError(str(exc)) from exc
+def merge_settings(defaults: Settings, values: object, name: str) -> Settings:
+    """Fill missing keys and reject unknown keys or incorrect value types."""
+    if not isinstance(values, dict):
+        raise ValueError(f"{name} must be a mapping.")
+    for key, value in values.items():
+        if key not in defaults:
+            raise ValueError(f"Unknown setting: {name}.{key}")
+        expected = type(defaults[key])
+        if type(value) is not expected:
+            raise ValueError(f"{name}.{key} must be {expected.__name__}.")
+    return {**defaults, **values}
 
 
-def load_config(path: Path | None) -> Config:
-    """Read optional YAML and fill unspecified settings with the documented defaults."""
-    data = {} if path is None else yaml.safe_load(path.read_text(encoding="utf-8"))
-    data = {} if data is None else data
-    if not isinstance(data, dict):
-        raise ValueError("Configuration must be a YAML mapping.")
-    for key in ("columns", "buttons"):
-        if key in data and not isinstance(data[key], list):
-            raise ValueError(f"{key} must be a list.")
-    data["columns"] = tuple(_construct(Column, item) for item in data.get("columns", []))
-    data["buttons"] = tuple(_construct(Button, item) for item in data.get("buttons", []))
-    data["animation"] = _construct(Animation, data.get("animation", {}))
-    data["theme"] = _construct(Theme, data.get("theme", {}))
-    config = _construct(Config, data)
+def make_config(values: object = None) -> Settings:
+    """Build a validated dictionary from partial settings, including nested defaults."""
+    defaults = default_config()
+    config = merge_settings(defaults, {} if values is None else values, "config")
+    for key in ("animation", "theme"):
+        config[key] = merge_settings(defaults[key], config[key], key)
+    config["columns"] = [
+        merge_settings({"field": "", "label": "", "width": 16, "animate": True}, item, "column")
+        for item in config["columns"]
+    ]
+    config["buttons"] = [
+        merge_settings({"label": "", "url": "", "icon": "◆", "arrow": "↗"}, item, "button")
+        for item in config["buttons"]
+    ]
     validate(config)
     return config
 
 
-def validate(config: Config) -> None:
-    """Check declared scalar types, useful rendering bounds, and safe links."""
-    models: tuple[Config | Animation | Theme | Column | Button, ...] = (
-        config,
-        config.animation,
-        config.theme,
-        *config.columns,
-        *config.buttons,
-    )
-    for model in models:
-        hints = get_type_hints(type(model))
-        for item in fields(model):
-            expected = hints[item.name]
-            if expected in (str, int, bool) and type(getattr(model, item.name)) is not expected:
-                raise ValueError(f"{type(model).__name__}.{item.name} must be {expected.__name__}.")
-    if not config.source or not config.output_dir:
+def load_config(path: Path | None) -> Settings:
+    """Read optional YAML and fill unspecified settings with the documented defaults."""
+    data = None if path is None else yaml.safe_load(path.read_text(encoding="utf-8"))
+    return make_config(data)
+
+
+def validate(config: Settings) -> None:
+    """Check rendering bounds and links after make_config has checked value types."""
+    if not config["source"] or not config["output_dir"]:
         raise ValueError("source and output_dir cannot be empty.")
     limits = [
-        ("table_index", config.table_index, 0, 100),
-        ("font_size", config.theme.font_size, 12, 40),
+        ("table_index", config["table_index"], 0, 100),
+        ("font_size", config["theme"]["font_size"], 12, 40),
     ]
-    limits += [("column.width", col.width, 4, 80) for col in config.columns]
+    limits += [("column.width", col["width"], 4, 80) for col in config["columns"]]
     limits += [
-        (key, getattr(config.animation, key), low, high)
+        (key, config["animation"][key], low, high)
         for key, low, high in (
             ("rounds", 1, 8),
             ("max_cells", 1, 8),
@@ -157,24 +114,24 @@ def validate(config: Config) -> None:
     for name, value, low, high in limits:
         if not low <= value <= high:
             raise ValueError(f"{name} must be between {low} and {high}.")
-    for item in fields(Theme):
-        if item.name != "font_size":
-            ImageColor.getrgb(getattr(config.theme, item.name))
-    if any(not col.field for col in config.columns):
+    for name, value in config["theme"].items():
+        if name != "font_size":
+            ImageColor.getrgb(value)
+    if any(not col["field"] for col in config["columns"]):
         raise ValueError("Each column needs a nonempty field name.")
-    if len({col.field for col in config.columns}) != len(config.columns):
+    if len({col["field"] for col in config["columns"]}) != len(config["columns"]):
         raise ValueError("Column field names must be unique.")
-    if len(config.buttons) > 6:
+    if len(config["buttons"]) > 6:
         raise ValueError("Use at most six navigation signs so they remain legible.")
-    for button in config.buttons:
+    for button in config["buttons"]:
         if (
-            not button.label
-            or not button.url
-            or len(button.arrow) != 1
-            or button.arrow not in "↑↗→↘↓↙←↖"
+            not button["label"]
+            or not button["url"]
+            or len(button["arrow"]) != 1
+            or button["arrow"] not in "↑↗→↘↓↙←↖"
         ):
             raise ValueError("Each button needs a label, URL, and a directional arrow such as ↗.")
-    for link in (config.board_link, *(button.url for button in config.buttons)):
+    for link in (config["board_link"], *(button["url"] for button in config["buttons"])):
         if (
             any(ord(char) < 32 for char in link)
             or link.startswith("//")
@@ -183,7 +140,7 @@ def validate(config: Config) -> None:
             raise ValueError(
                 "Use an HTTPS/HTTP link, relative path, or anchor without control characters."
             )
-    if config.animation.min_rotations > config.animation.max_rotations:
+    if config["animation"]["min_rotations"] > config["animation"]["max_rotations"]:
         raise ValueError("min_rotations cannot exceed max_rotations.")
 
 

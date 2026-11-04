@@ -49,7 +49,7 @@ output_dir: monitoring/assets  # Optional; defaults to assets/flight-board
 In your workflow, point the Action to the configuration:
 
 ```yaml
-- uses: j3551ca/flightboard_template@v2
+- uses: j3551ca/flightboard-tables@v2
   with:
     config: monitoring/flight-board-config.yml
 ```
@@ -149,12 +149,14 @@ All board settings live in YAML. Unspecified settings use the documented default
 The Action has **one input**, `config`, defaulting to `flight-board-config.yml`. All board settings belong in that file. For example:
 
 ```yaml
-- uses: j3551ca/flightboard_template@v2
+- uses: j3551ca/flightboard-tables@v2
   with:
     config: flight-board-config.yml
 ```
 
 The Action and local CLI use the same entry point and configuration.
+
+**Previously used `flightboard_template`?** Change the workflow reference to `j3551ca/flightboard-tables@v2`. GitHub does not redirect Action references after a repository rename.
 
 **Migrating from v1:** move `source`, `title`, `team`, `output-dir` (as `output_dir`), and `readme` inputs into YAML. Replace `no-animation` with `animation: {enabled: false}`, `no-buttons` with `buttons: []`, and `no-readme` with `readme: ''`. The existing v1 tags remain available.
 

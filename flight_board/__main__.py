@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import Config, load_config, workspace_path
+from .config import Settings, load_config, workspace_path
 from .io import read_table, readme_block, sign, updated_readme
 from .render import animation_frames, render_board, save_animation, validate_animation
 
@@ -33,7 +33,7 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
-def resolve_config(args: argparse.Namespace, root: Path) -> Config:
+def resolve_config(args: argparse.Namespace, root: Path) -> Settings:
     """Load every board setting from YAML, using defaults for unspecified values."""
     path = workspace_path(root, args.config or "flight-board-config.yml")
     if args.config and not path.is_file():
@@ -41,11 +41,11 @@ def resolve_config(args: argparse.Namespace, root: Path) -> Config:
     return load_config(path if path.is_file() else None)
 
 
-def generate(config: Config, root: Path, validate_only: bool = False) -> list[Path]:
+def generate(config: Settings, root: Path, validate_only: bool = False) -> list[Path]:
     """Validate first, render to staging, then atomically replace each generated file."""
-    source = workspace_path(root, config.source)
-    output = workspace_path(root, config.output_dir)
-    readme = workspace_path(root, config.readme) if config.readme else None
+    source = workspace_path(root, config["source"])
+    output = workspace_path(root, config["output_dir"])
+    readme = workspace_path(root, config["readme"]) if config["readme"] else None
     # Dedicated assets keep the workflow's explicit git add from staging arbitrary sources.
     if (
         output == root
@@ -56,28 +56,29 @@ def generate(config: Config, root: Path, validate_only: bool = False) -> list[Pa
             "output_dir must be a dedicated directory outside source and README paths."
         )
     generated = [output / "board.png", output / "board.gif"]
-    generated += [output / f"sign-{i + 1}.png" for i in range(len(config.buttons))]
+    generated += [output / f"sign-{i + 1}.png" for i in range(len(config["buttons"]))]
     for path in generated:
         if path.is_symlink():
             raise ValueError(f"Generated file cannot be a symlink: {path.name}")
-    board = render_board(config, read_table(source, config.table_index))
-    buttons = [sign(button, config.theme) for button in config.buttons]
+    board = render_board(config, read_table(source, config["table_index"]))
+    buttons = [sign(button, config["theme"]) for button in config["buttons"]]
     content = None
     if readme:
         if readme == source:
             raise ValueError("Keep source data separate from the managed README.")
         original = readme.read_text(encoding="utf-8") if readme.exists() else "# Flight board\n"
         content = updated_readme(original, readme_block(config, output, readme, source))
-    validate_animation(board, config.animation)
+    validate_animation(board, config["animation"])
     if validate_only:
         print(
-            f"Valid: {len(board.cells)} cells, {board.image.width} × {board.image.height} pixels."
+            f"Valid: {len(board['cells'])} cells, "
+            f"{board['image'].width} × {board['image'].height} pixels."
         )
         return []
-    frames, durations = animation_frames(board, config.animation)
+    frames, durations = animation_frames(board, config["animation"])
     with tempfile.TemporaryDirectory(prefix="flight-board-") as temporary:
         stage = Path(temporary)
-        board.image.save(stage / "board.png")
+        board["image"].save(stage / "board.png")
         save_animation(frames, durations, stage / "board.gif")
         for index, image in enumerate(buttons, 1):
             image.save(stage / f"sign-{index}.png")
@@ -93,7 +94,7 @@ def generate(config: Config, root: Path, validate_only: bool = False) -> list[Pa
             (stage / "readme").write_text(content, encoding="utf-8")
             _replace_file(stage / "readme", readme)
             generated.append(readme)
-    print(f"Rendered {board.image.width} × {board.image.height} board in {output}.")
+    print(f"Rendered {board['image'].width} × {board['image'].height} board in {output}.")
     return generated
 
 
@@ -118,16 +119,16 @@ def main(argv: list[str] | None = None) -> int:
         config = resolve_config(args, root)
         generate(config, root, args.validate_only)
         if not args.validate_only and os.environ.get("GITHUB_OUTPUT"):
-            output = workspace_path(root, config.output_dir).relative_to(root).as_posix()
+            output = workspace_path(root, config["output_dir"]).relative_to(root).as_posix()
             readme = (
-                workspace_path(root, config.readme).relative_to(root).as_posix()
-                if config.readme
+                workspace_path(root, config["readme"]).relative_to(root).as_posix()
+                if config["readme"]
                 else ""
             )
             with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
                 stream.write(
                     f"assets-dir={output}\nreadme={readme}\n"
-                    f"image={output}/board.{'gif' if config.animation.enabled else 'png'}\n"
+                    f"image={output}/board.{'gif' if config['animation']['enabled'] else 'png'}\n"
                 )
     except (ValueError, OSError, yaml.YAMLError) as exc:
         print(f"flight-board: {exc}", file=sys.stderr)

@@ -30,4 +30,6 @@ After setup, commit table or configuration changes to refresh the board. You can
 
 **The bot cannot save changes?** It needs `contents: write`. Protected branches may require your organization's pull-request process instead of a direct push.
 
+**Private pipeline dashboard?** Use the same three files in a private repository. Add columns such as `Pipeline`, `Lifecycle`, `Owner`, and `Updated`, with values such as `Development` or `Production`. The generated board stays in that repository. These labels come from your table; they are not inferred from workflow runs.
+
 **Need live statuses?** The board normally reflects your table. Add the optional [workflow monitor](monitoring.md) to populate it automatically.

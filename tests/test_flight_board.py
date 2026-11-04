@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import replace
 from pathlib import Path
 from random import Random
 
@@ -11,17 +10,16 @@ import pytest
 from PIL import Image, ImageChops
 
 from flight_board.__main__ import generate, main
-from flight_board.config import (
-    Animation,
-    Button,
-    Column,
-    Config,
-    Theme,
-    load_config,
-    workspace_path,
+from flight_board.config import load_config, make_config, workspace_path
+from flight_board.io import END, START, read_table, updated_readme
+from flight_board.render import (
+    animation_frames,
+    choose_cells,
+    render_board,
+    render_card,
+    render_flap,
+    save_animation,
 )
-from flight_board.io import END, START, Table, read_table, updated_readme
-from flight_board.render import animation_frames, choose_cells, render_board, save_animation
 
 
 @pytest.fixture
@@ -39,14 +37,14 @@ def test_input_formats_and_escaped_markdown(tmp_path: Path) -> None:
         "| [A \\| B](https://example.org) | **Tuesday**<br>14:00 UTC |\n\n"
         "| Other |\n| --- |\n| Second |\n"
     )
-    assert read_table(source).rows == ({"Name": "A | B", "Date": "Tuesday\n14:00 UTC"},)
-    assert read_table(source, 1).rows == ({"Other": "Second"},)
+    assert read_table(source)["rows"] == [{"Name": "A | B", "Date": "Tuesday\n14:00 UTC"}]
+    assert read_table(source, 1)["rows"] == [{"Other": "Second"}]
     source = tmp_path / "input.json"
     source.write_text(json.dumps([{"name": "A", "count": 0}, {"count": None, "name": "B"}]))
-    assert read_table(source).rows[1] == {"name": "B", "count": ""}
+    assert read_table(source)["rows"][1] == {"name": "B", "count": ""}
     source = tmp_path / "input.csv"
     source.write_text('name,description\nA,"Quoted, with\nline break"\n')
-    assert read_table(source).rows[0]["description"] == "Quoted, with\nline break"
+    assert read_table(source)["rows"][0]["description"] == "Quoted, with\nline break"
 
 
 @pytest.mark.parametrize("contents", ["a,a\nx,y\n", "a,b\nx\n", "a,b\n", ",b\nx,y\n"])
@@ -79,60 +77,78 @@ def test_invalid_configuration_is_actionable(tmp_path: Path, contents: str) -> N
 
 
 def test_layout_has_no_fixed_rows_or_columns() -> None:
-    table = Table(
-        ("Task", "Notes"),
-        (
+    table = {
+        "fields": ["Task", "Notes"],
+        "rows": [
             {"Task": "Alpha", "Notes": "A long value with many words and an explicit\nline break"},
             {"Task": "Beta", "Notes": "短い"},
             *({"Task": f"Task {i}", "Notes": "OK"} for i in range(12)),
-        ),
+        ],
+    }
+    config = make_config(
+        {"columns": [{"field": "Notes", "width": 12}, {"field": "Task", "width": 10}]}
     )
-    config = Config(columns=(Column("Notes", width=12), Column("Task", width=10)))
     board = render_board(config, table)
-    assert len(board.cells) == 28  # More than the original eleven hard-coded rows.
-    assert board.cells[0].field == "Notes"
-    assert board.cells[0].bounds[3] - board.cells[0].bounds[1] > (
-        board.cells[2].bounds[3] - board.cells[2].bounds[1]
+    assert len(board["cells"]) == 28  # More than the original eleven hard-coded rows.
+    assert board["cells"][0]["field"] == "Notes"
+    assert board["cells"][0]["bounds"][3] - board["cells"][0]["bounds"][1] > (
+        board["cells"][2]["bounds"][3] - board["cells"][2]["bounds"][1]
     )
-    for cell in board.cells:
-        for slot in cell.slots:
-            x, y = slot.position
-            assert 0 <= x < x + board.cards.width <= board.image.width
-            assert 0 <= y < y + board.cards.height <= board.image.height
+    for cell in board["cells"]:
+        for slot in cell["slots"]:
+            x, y = slot["position"]
+            assert 0 <= x < x + board["cards"]["width"] <= board["image"].width
+            assert 0 <= y < y + board["cards"]["height"] <= board["image"].height
 
 
 def test_missing_field_and_large_board_fail_before_writing(workspace: Path) -> None:
-    config = Config(columns=(Column("Missing"),))
+    config = make_config({"columns": [{"field": "Missing"}]})
     with pytest.raises(ValueError, match="Fields missing"):
         generate(config, workspace)
     assert not (workspace / "assets").exists()
     with pytest.raises(ValueError, match="4,000"):
         render_board(
-            Config(
-                columns=(Column("Pipeline", width=80), Column("Status", width=80)),
-                theme=Theme(font_size=40),
+            make_config(
+                {
+                    "columns": [
+                        {"field": "Pipeline", "width": 80},
+                        {"field": "Status", "width": 80},
+                    ],
+                    "theme": {"font_size": 40},
+                }
             ),
             read_table(workspace / "board.csv"),
         )
 
 
 def test_flap_endpoints_and_settling(tmp_path: Path) -> None:
-    config = Config(
-        columns=(Column("Task", width=8), Column("Deadline", width=8, animate=False)),
-        animation=Animation(rounds=1, min_rotations=2, max_rotations=3),
+    config = make_config(
+        {
+            "columns": [
+                {"field": "Task", "width": 8},
+                {"field": "Deadline", "width": 8, "animate": False},
+            ],
+            "animation": {"rounds": 1, "min_rotations": 2, "max_rotations": 3},
+        }
     )
-    table = Table(("Task", "Deadline"), ({"Task": "Alpha", "Deadline": "12:00"},))
+    table = {"fields": ["Task", "Deadline"], "rows": [{"Task": "Alpha", "Deadline": "12:00"}]}
     board = render_board(config, table)
-    cards = board.cards
-    assert ImageChops.difference(cards.card("A"), cards.flap("A", "B", 0, 6)).getbbox() is None
-    assert ImageChops.difference(cards.card("B"), cards.flap("A", "B", 5, 6)).getbbox() is None
-    selected = choose_cells(board, config.animation, Random(2))
-    assert all(cell.field != "Deadline" for cell in selected)
-    assert len(selected) <= config.animation.max_cells
-    frames, durations = animation_frames(board, config.animation)
+    cards = board["cards"]
+    assert (
+        ImageChops.difference(render_card(cards, "A"), render_flap(cards, "A", "B", 0, 6)).getbbox()
+        is None
+    )
+    assert (
+        ImageChops.difference(render_card(cards, "B"), render_flap(cards, "A", "B", 5, 6)).getbbox()
+        is None
+    )
+    selected = choose_cells(board, config["animation"], Random(2))
+    assert all(cell["field"] != "Deadline" for cell in selected)
+    assert len(selected) <= config["animation"]["max_cells"]
+    frames, durations = animation_frames(board, config["animation"])
     assert frames[0].tobytes() == frames[-1].tobytes()
     assert any(frame.tobytes() != frames[0].tobytes() for frame in frames)
-    deadline = board.cells[1].bounds
+    deadline = board["cells"][1]["bounds"]
     assert all(
         frame.crop(deadline).tobytes() == frames[0].crop(deadline).tobytes() for frame in frames
     )
@@ -154,31 +170,35 @@ def test_flap_endpoints_and_settling(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("count", [0, 1, 3, 6])
 def test_optional_signs_and_idempotent_readme(workspace: Path, count: int) -> None:
-    config = Config(
-        animation=Animation(enabled=False),
-        buttons=tuple(Button(f"Guide {index}", f"docs/{index}.md") for index in range(count)),
+    config = make_config(
+        {
+            "animation": {"enabled": False},
+            "buttons": [
+                {"label": f"Guide {index}", "url": f"docs/{index}.md"} for index in range(count)
+            ],
+        }
     )
     generate(config, workspace)
     first = (workspace / "README.md").read_bytes()
-    png = (workspace / config.output_dir / "board.png").read_bytes()
+    png = (workspace / config["output_dir"] / "board.png").read_bytes()
     generate(config, workspace)
     assert (workspace / "README.md").read_bytes() == first
-    assert (workspace / config.output_dir / "board.png").read_bytes() == png
+    assert (workspace / config["output_dir"] / "board.png").read_bytes() == png
     text = first.decode()
     assert text.count(START) == text.count(END) == 1
     assert text.startswith("# My team") and text.endswith("Keep me.\n")
     assert text.count('alt="Guide') == count
     assert ('<p align="center">' in text) == bool(count)
-    assert len(list((workspace / config.output_dir).glob("sign-*.png"))) == count
-    generate(replace(config, buttons=()), workspace)
-    assert not list((workspace / config.output_dir).glob("sign-*.png"))
+    assert len(list((workspace / config["output_dir"]).glob("sign-*.png"))) == count
+    generate({**config, "buttons": []}, workspace)
+    assert not list((workspace / config["output_dir"]).glob("sign-*.png"))
 
 
 def test_bad_markers_do_not_overwrite_files(workspace: Path) -> None:
     original = f"{START}\nUser text\n{START}"
     (workspace / "README.md").write_text(original)
     with pytest.raises(ValueError, match="marker pair"):
-        generate(Config(), workspace)
+        generate(make_config(), workspace)
     assert (workspace / "README.md").read_text() == original
     assert not (workspace / "assets").exists()
 
@@ -224,17 +244,17 @@ def test_path_escape_and_source_collision(workspace: Path, tmp_path: Path) -> No
     with pytest.raises(ValueError, match="control"):
         workspace_path(workspace, "x\ny")
     with pytest.raises(ValueError, match="dedicated"):
-        generate(Config(output_dir="."), workspace)
+        generate(make_config({"output_dir": "."}), workspace)
     (workspace / "escape").symlink_to(workspace.parent, target_is_directory=True)
     with pytest.raises(ValueError, match="inside the workspace"):
         workspace_path(workspace, "escape/out.png")
 
 
 def test_default_config_and_unicode_text(workspace: Path) -> None:
-    assert load_config(None) == Config()
-    table = Table(("Name",), ({"Name": "Montréal → Zürich"},))
-    board = render_board(Config(), table)
-    assert "".join(slot.character for slot in board.cells[0].slots) == "MONTRÉAL→ZÜRICH"
+    assert load_config(None) == make_config()
+    table = {"fields": ["Name"], "rows": [{"Name": "Montréal → Zürich"}]}
+    board = render_board(make_config(), table)
+    assert "".join(slot["character"] for slot in board["cells"][0]["slots"]) == "MONTRÉAL→ZÜRICH"
 
 
 def test_yaml_errors_are_concise(workspace: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -265,9 +285,36 @@ def test_readme_marker_examples_are_preserved(workspace: Path) -> None:
     example = f"\n## Instructions\n\n```html\n{START}\n{END}\n```\n"
     readme = workspace / "README.md"
     readme.write_text(readme.read_text() + example)
-    config = Config(animation=Animation(enabled=False))
+    config = make_config({"animation": {"enabled": False}})
     generate(config, workspace)
     first = readme.read_text()
     assert first.endswith(example)
     generate(config, workspace)
     assert readme.read_text() == first
+
+
+def test_configuration_defaults_do_not_leak_between_boards() -> None:
+    supplied = {"theme": {"accent": "#123456"}, "columns": [{"field": "Status"}]}
+    first = make_config(supplied)
+    second = make_config()
+    first["theme"]["accent"] = "#ffffff"
+    first["columns"][0]["width"] = 30
+    first["buttons"].append({"label": "Docs", "url": "docs.md"})
+    assert supplied == {"theme": {"accent": "#123456"}, "columns": [{"field": "Status"}]}
+    assert second["theme"]["accent"] == "#f0c66a"
+    assert second["columns"] == second["buttons"] == []
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"columns": [{}]},
+        {"buttons": [{"label": "Docs"}]},
+        {"theme": {"colour": "red"}},
+        {"animation": None},
+        {"columns": ["Status"]},
+    ],
+)
+def test_partial_dictionary_errors_are_clear(values: dict[str, object]) -> None:
+    with pytest.raises(ValueError):
+        make_config(values)
