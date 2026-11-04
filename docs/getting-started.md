@@ -1,5 +1,7 @@
 # Put a flight board in your own repository
 
+For the short version, use the **[quick-start guide](quick-start.md)**. This page covers the full setup and troubleshooting.
+
 Choose **A** if you want a new repository containing the renderer and examples. Choose **B** if you already have a repository and only want to add a board to its README.
 
 ## A. Create a repository from the template
