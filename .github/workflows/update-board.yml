@@ -24,7 +24,7 @@ jobs:
       - uses: ./
         id: board
         with:
-          config: demo/flight-board.yml
+          config: demo/flight-board-config.yml
       - name: Commit refreshed board
         env:
           ASSETS: ${{ steps.board.outputs.assets-dir }}

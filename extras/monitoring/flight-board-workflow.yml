@@ -1,5 +1,5 @@
 # Copy to .github/workflows/flight-board.yml in YOUR repository.
-# Also copy collect_workflows.py and flight-board.yml from this folder.
+# Also copy collect_workflows.py and flight-board-config.yml from this folder.
 name: Monitor pipelines
 on:
   workflow_dispatch:

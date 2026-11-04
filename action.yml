@@ -7,7 +7,7 @@ branding:
 inputs:
   config:
     description: Path to your board configuration, relative to your repository root.
-    default: flight-board.yml
+    default: flight-board-config.yml
 outputs:
   assets-dir:
     description: Generated assets directory.

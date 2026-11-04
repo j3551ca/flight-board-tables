@@ -7,7 +7,7 @@ Copy these files into **your** repository instead of the ordinary starter files:
 | Copy | Save as |
 | --- | --- |
 | [Collector](../extras/monitoring/collect_workflows.py) | `collect_workflows.py` |
-| [Configuration](../extras/monitoring/flight-board.yml) | `flight-board.yml` |
+| [Configuration](../extras/monitoring/flight-board-config.yml) | `flight-board-config.yml` |
 | [Workflow](../extras/monitoring/flight-board-workflow.yml) | `.github/workflows/flight-board.yml` |
 
 Set your team name, commit, and run **Actions → Monitor pipelines → Run workflow**. The workflow fetches statuses, writes `board.json`, runs the Action, and commits the table and images. It also checks every six hours. Do not install the ordinary starter workflow alongside this one.

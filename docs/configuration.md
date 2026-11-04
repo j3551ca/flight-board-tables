@@ -1,6 +1,6 @@
 # Configuration
 
-Start with the [starter configuration](../starter/flight-board.yml). Unknown settings fail with an error so a typo cannot silently change the board.
+Start with the [starter configuration](../starter/flight-board-config.yml). Unknown settings fail with an error so a typo cannot silently change the board.
 
 ## Board and source
 
@@ -24,6 +24,46 @@ Paths stay inside the workspace, including symlink resolution. Use a dedicated o
 The source table remains untouched. The generated assets are `board.png`, `board.gif`, and optional `sign-1.png` through `sign-6.png`. Removing buttons removes obsolete generated sign files. Other files in the output directory are left alone.
 
 CSV supports quoted cells and embedded newlines. JSON rows must have matching field names and scalar values (strings, numbers, booleans, or null). Quote date-like values in YAML. Markdown link labels are shown without their URLs; explicit `<br>` breaks are preserved. Use the source link to access full text and hyperlinks.
+
+## Using a subfolder
+
+The data and configuration can live anywhere inside your repository. GitHub requires the workflow itself to be directly in `.github/workflows/`.
+
+For example:
+
+```text
+.github/workflows/flight-board.yml
+monitoring/board.csv
+monitoring/flight-board-config.yml
+README.md
+```
+
+In `monitoring/flight-board-config.yml`:
+
+```yaml
+source: monitoring/board.csv
+team: Your Team
+output_dir: monitoring/assets  # Optional; defaults to assets/flight-board
+```
+
+In your workflow, point the Action to the configuration:
+
+```yaml
+- uses: j3551ca/flightboard_template@v2
+  with:
+    config: monitoring/flight-board-config.yml
+```
+
+Update that workflow's push filters:
+
+```yaml
+paths:
+  - monitoring/board.csv
+  - monitoring/flight-board-config.yml
+  - .github/workflows/flight-board.yml
+```
+
+All filesystem paths resolve from the **repository root**. Moving the configuration does not change that base. The default README remains the root `README.md`; set `readme` if you want a different file. Button URLs and an explicit `board_link` remain relative to whichever README displays them.
 
 ## Columns
 
@@ -98,12 +138,12 @@ Quote hex colors in YAML. The board scales to the README width. For readability,
 
 Run `flight-board --help` for all arguments. CLI overrides take precedence over YAML. `--workspace` selects the consumer root. `--source`, `--title`, `--team`, `--subtitle`, `--footer`, `--output-dir`, `--readme`, `--board-link`, `--table-index`, `--font-size`, and `--seed` override their corresponding settings. `--no-buttons`, `--no-animation`, and `--no-readme` disable optional features. `--validate-only` checks data, paths, layout, and animation size without writing anything.
 
-The Action has **one input**, `config`, defaulting to `flight-board.yml`. All board settings belong in that file. For example:
+The Action has **one input**, `config`, defaulting to `flight-board-config.yml`. All board settings belong in that file. For example:
 
 ```yaml
 - uses: j3551ca/flightboard_template@v2
   with:
-    config: flight-board.yml
+    config: flight-board-config.yml
 ```
 
 The local CLI still offers overrides for convenience; the Action uses the same entry point.

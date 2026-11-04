@@ -3,7 +3,7 @@ name: Update flight board
 on:
   push:
     branches: [main]
-    paths: [board.csv, flight-board.yml, .github/workflows/flight-board.yml]
+    paths: [board.csv, flight-board-config.yml, .github/workflows/flight-board.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -18,7 +18,7 @@ jobs:
       - uses: j3551ca/flightboard_template@v2 # Pin to a release commit for immutable dependencies.
         id: board
         with:
-          config: flight-board.yml
+          config: flight-board-config.yml
       - name: Commit generated files
         env:
           ASSETS: ${{ steps.board.outputs.assets-dir }}

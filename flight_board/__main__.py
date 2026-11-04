@@ -23,7 +23,9 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument(
         "--workspace", type=Path, default=Path.cwd(), help="Consumer repository root."
     )
-    result.add_argument("--config", help="YAML file; defaults to flight-board.yml when present.")
+    result.add_argument(
+        "--config", help="YAML file; defaults to flight-board-config.yml when present."
+    )
     for name in (
         "source",
         "title",
@@ -44,7 +46,7 @@ def parser() -> argparse.ArgumentParser:
 
 def resolve_config(args: argparse.Namespace, root: Path) -> Config:
     """Apply CLI overrides to the same configuration used by the Action."""
-    path = workspace_path(root, args.config or "flight-board.yml")
+    path = workspace_path(root, args.config or "flight-board-config.yml")
     if args.config and not path.is_file():
         raise ValueError(f"Configuration not found: {args.config}")
     config = load_config(path if path.is_file() else None)

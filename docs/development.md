@@ -10,14 +10,14 @@ With Python 3.11 or later, from this repository:
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
-flight-board --config demo/flight-board.yml
+flight-board --config demo/flight-board-config.yml
 ```
 
 Both the Action and local use run the **same entry point**: `python -m flight_board`. Use `--workspace /path/to/your/repository` to render another local repository. Paths in the configuration are relative to that workspace.
 
 ```bash
-flight-board --config demo/flight-board.yml --validate-only
-flight-board --config demo/flight-board.yml --no-animation
+flight-board --config demo/flight-board-config.yml --validate-only
+flight-board --config demo/flight-board-config.yml --no-animation
 flight-board --help
 ```
 

@@ -17,7 +17,7 @@ jobs:
       - run: ruff check . && ruff format --check .
       - run: mypy flight_board extras
       - run: pytest -q
-      - run: python -m flight_board --config demo/flight-board.yml --validate-only
+      - run: python -m flight_board --config demo/flight-board-config.yml --validate-only
   composite-action:
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +25,7 @@ jobs:
       - run: cp starter/board.csv board.csv
       - uses: ./
         with:
-          config: starter/flight-board.yml
+          config: starter/flight-board-config.yml
   public-consumer:
     if: startsWith(github.ref, 'refs/tags/v2')
     runs-on: ubuntu-latest
@@ -33,7 +33,7 @@ jobs:
       - name: Create a consumer workspace without the renderer source
         run: |
           printf 'Pipeline,Status\nExternal pipeline,Passed\n' > board.csv
-          printf 'team: External team\nanimation: {enabled: false}\n' > flight-board.yml
+          printf 'team: External team\nanimation: {enabled: false}\n' > flight-board-config.yml
           printf '# Consumer repository\n' > README.md
       - uses: j3551ca/flightboard_template@v2
         id: board

@@ -16,17 +16,37 @@ A GitHub Action that turns your table into an animated flight board in your READ
 
 ## Quick start
 
-Copy **three files** into your own repository:
+**Use the Action from your own repository. No AI agent, separate board repository, or Python setup is needed.**
 
-| File to copy | Destination in your repository |
-| --- | --- |
-| [Table](starter/board.csv) | `board.csv` |
-| [Configuration](starter/flight-board.yml) | `flight-board.yml` |
-| [Workflow](starter/flight-board-workflow.yml) | `.github/workflows/flight-board.yml` |
+1. Copy these files:
 
-Edit the table and team name, then commit to `main`. The workflow generates the board and adds it to your README. **You do not need to clone this repository or copy its Python code.**
+   | Copy | Save as |
+   | --- | --- |
+   | [Table](starter/board.csv) | `board.csv` |
+   | [Configuration](starter/flight-board-config.yml) | `flight-board-config.yml` |
+   | [Workflow](starter/flight-board-workflow.yml) | `.github/workflows/flight-board.yml` |
 
-[Setup details and troubleshooting](docs/quick-start.md) · [Optional settings](docs/configuration.md)
+2. Edit your table and set `team` in `flight-board-config.yml`. All columns display automatically. See [configuration](docs/configuration.md) to choose columns, protect dates from animation, or add navigation signs.
+3. Commit to `main`. Open **Actions → Update flight board** to follow progress, then view your README.
+
+The workflow adds the board at the bottom of your README. To choose its position, insert:
+
+```html
+<!-- flight-board:start -->
+<!-- flight-board:end -->
+```
+
+After setup, commit table or configuration changes to refresh the board. You can also select **Actions → Update flight board → Run workflow**.
+
+**Using a subfolder?** Keep the workflow in `.github/workflows/`. Set its `config` input to your configuration's path, and set `source` and any output paths relative to the repository root—not the configuration folder. Update the workflow's `paths` filters too. [Subfolder example](docs/configuration.md#using-a-subfolder).
+
+**Different branch?** Update the workflow's `branches` filter.
+
+**Nothing runs?** Check that Actions is enabled and your organization permits this Action.
+
+**The bot cannot save changes?** It needs `contents: write`. Protected branches may require your organization's pull-request process instead of a direct push.
+
+**Need live statuses?** The board normally reflects your table. Add the optional [workflow monitor](docs/monitoring.md) to populate it automatically.
 
 ## How it works
 
@@ -34,7 +54,7 @@ Your workflow calls `j3551ca/flightboard_template@v2`. The Action reads **your**
 
 The board above is just this repository's demo. Your data and images stay in your repository.
 
-## What lives here
+## In this repo
 
 - `flight_board/` — the Python implementation, supplied by the Action.
 - `starter/` — the three files users copy.

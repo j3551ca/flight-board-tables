@@ -241,6 +241,36 @@ def test_default_config_and_unicode_text(workspace: Path) -> None:
 
 
 def test_yaml_errors_are_concise(workspace: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    (workspace / "flight-board.yml").write_text("title: [unclosed")
+    (workspace / "flight-board-config.yml").write_text("title: [unclosed")
     assert main(["--workspace", str(workspace)]) == 2
     assert "Traceback" not in capsys.readouterr().err
+
+
+def test_subfolder_configuration_uses_repository_root(workspace: Path) -> None:
+    folder = workspace / "monitoring"
+    folder.mkdir()
+    (workspace / "board.csv").rename(folder / "board.csv")
+    (folder / "flight-board-config.yml").write_text(
+        "source: monitoring/board.csv\noutput_dir: monitoring/assets\n"
+        "team: Subfolder team\nanimation: {enabled: false}\n"
+    )
+    assert (
+        main(["--workspace", str(workspace), "--config", "monitoring/flight-board-config.yml"]) == 0
+    )
+    assert (folder / "assets/board.png").is_file()
+    readme = (workspace / "README.md").read_text()
+    assert 'href="monitoring/board.csv"' in readme
+    assert 'src="monitoring/assets/board.png"' in readme
+    assert not (folder / "README.md").exists()
+
+
+def test_readme_marker_examples_are_preserved(workspace: Path) -> None:
+    example = f"\n## Instructions\n\n```html\n{START}\n{END}\n```\n"
+    readme = workspace / "README.md"
+    readme.write_text(readme.read_text() + example)
+    config = Config(animation=Animation(enabled=False))
+    generate(config, workspace)
+    first = readme.read_text()
+    assert first.endswith(example)
+    generate(config, workspace)
+    assert readme.read_text() == first

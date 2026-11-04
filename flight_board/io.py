@@ -163,10 +163,22 @@ def readme_block(config: Config, output: Path, readme: Path, source: Path) -> st
 
 
 def updated_readme(original: str, block: str) -> str:
-    """Replace exactly one managed block; refuse ambiguous markers without losing prose."""
-    starts, ends = original.count(START), original.count(END)
-    if not starts and not ends:
+    """Replace the managed block, ignoring marker examples inside Markdown code blocks."""
+    code_lines = {
+        line
+        for token in MarkdownIt().parse(original)
+        if token.type in {"fence", "code_block"} and token.map
+        for line in range(*token.map)
+    }
+    markers: list[tuple[str, int]] = []
+    offset = 0
+    for number, line in enumerate(original.splitlines(keepends=True)):
+        marker = line.strip()
+        if number not in code_lines and marker in (START, END):
+            markers.append((marker, offset + line.index(marker)))
+        offset += len(line)
+    if not markers:
         return original.rstrip() + "\n\n" + block + "\n"
-    if starts != 1 or ends != 1 or original.index(START) > original.index(END):
+    if [marker for marker, _ in markers] != [START, END]:
         raise ValueError("README needs exactly one correctly ordered flight-board marker pair.")
-    return original[: original.index(START)] + block + original[original.index(END) + len(END) :]
+    return original[: markers[0][1]] + block + original[markers[1][1] + len(END) :]
