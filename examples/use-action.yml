@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: j3551ca/flight-board@v1 # Pin to a release commit for immutable dependencies.
+      - uses: j3551ca/flightboard_template@v1 # Pin to a release commit for immutable dependencies.
         id: board
         with:
           config: flight-board.yml

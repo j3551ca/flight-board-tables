@@ -25,7 +25,7 @@ python scripts/collect_workflows.py \
 
 `--repository` defaults to `GITHUB_REPOSITORY`. `GH_TOKEN` is optional for public API reads but is needed for private repositories and appropriate rate limits. In Actions, use `${{ github.token }}` with `actions: read`; `contents: write` is only needed by the later commit step. The example collector targets github.com; GitHub Enterprise Server users should adapt the API endpoint before use.
 
-For an existing repository consuming the reusable Action, copy the collector script too (or use your own data producer), and replace `uses: ./` with `uses: j3551ca/flight-board@v1` in the monitoring example.
+For an existing repository consuming the reusable Action, copy the collector script too (or use your own data producer), and replace `uses: ./` with `uses: j3551ca/flightboard_template@v1` in the monitoring example.
 
 ## Other pipeline systems
 

@@ -31,7 +31,7 @@ You only need your data, a configuration file, and a workflow. The Action suppli
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  - uses: j3551ca/flight-board@v1
+  - uses: j3551ca/flightboard_template@v1
     id: board
     with:
       config: flight-board.yml
