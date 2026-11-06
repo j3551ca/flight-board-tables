@@ -11,6 +11,7 @@ A GitHub Action that turns your table into an animated flight board in your READ
 
 <a href="demo/board.csv"><img src="assets/flight-board/board.gif" width="100%" alt="DEPARTURES → PIPELINE STATUS — open source table"></a>
 
+[Static board](assets/flight-board/board.png)
 <!-- flight-board:end -->
 
 ## Quick start
