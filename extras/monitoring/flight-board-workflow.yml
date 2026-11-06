@@ -24,7 +24,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 collect_workflows.py --exclude 'Monitor pipelines' --exclude 'Update flight board'
-      - uses: j3551ca/flightboard-tables@v2
+      - uses: j3551ca/flight-board-tables@v2
         id: board
       - name: Commit snapshot and board
         env:

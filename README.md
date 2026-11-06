@@ -1,4 +1,4 @@
-# Flightboard Tables
+# Flight Board Tables
 
 A GitHub Action that turns your table into an animated flight board in your README.
 
@@ -51,7 +51,7 @@ After setup, commit table or configuration changes to refresh the board. You can
 
 ## How it works
 
-Your workflow calls `j3551ca/flightboard-tables@v2`. The Action reads **your** table and configuration, generates images in **your** repository, and updates **your** README. The workflow commits those changes.
+Your workflow calls `j3551ca/flight-board-tables@v2`. The Action reads **your** table and configuration, generates images in **your** repository, and updates **your** README. The workflow commits those changes.
 
 The board above is just this repository's demo. Your data and images stay in your repository.
 
